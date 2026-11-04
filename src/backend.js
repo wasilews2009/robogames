@@ -324,11 +324,20 @@ const Backend = (function () {
   const canJudge = (u, catId) => u && (u.role === 'admin' || (u.categories || []).indexOf(catId) >= 0);
   const cleanStr = v => String(v === undefined || v === null ? '' : v).trim().slice(0, 300);
   function cleanTeam(b) {
-    return {
-      name: cleanStr(b.name), school: cleanStr(b.school), settlement: cleanStr(b.settlement),
+    const t = {
+      name: cleanStr(b.name), school: cleanStr(b.school), settlement: cleanStr(b.settlement), individual: !!b.individual,
       members: (Array.isArray(b.members) ? b.members : []).map(m => ({ surname: cleanStr(m.surname), name: cleanStr(m.name), patronymic: cleanStr(m.patronymic), birthdate: cleanStr(m.birthdate) })).filter(m => m.surname || m.name)
     };
+    if (t.individual) {
+      // особиста участь: один учасник, назва = прізвище та ім'я
+      t.members = t.members.slice(0, 1);
+      t.name = t.members.length ? [t.members[0].surname, t.members[0].name].filter(Boolean).join(' ') : '';
+      if (!t.name) fail('Вкажіть прізвище та ім’я учасника');
+    }
+    return t;
   }
+  /* Особистих учасників можна реєструвати лише в категоріях, де це дозволено (Робо-біатлон) */
+  const catAllows = (W, cid, team) => { const c = catOf(W, cid); return !!c && (!team || !team.individual || !!RG.TYPES[c.type].individualAllowed); };
   const teamName = (db, id) => { const t = db.teams.find(t => t.id === id); return t ? t.name : '—'; };
   const catOf = (db, id) => db.categories.find(c => c.id === id);
   function matchSummary(db, cat, m) {
@@ -576,7 +585,7 @@ const Backend = (function () {
         if (!t.name) fail('Вкажіть назву команди');
         W.teams.push(t);
         const notes = [];
-        (body.categories || []).filter(c => catOf(W, c)).forEach(cid => { W.entries.push(newEntry(W, cid, t.id)); notes.push(...adaptSchedule(W, catOf(W, cid))); });
+        (body.categories || []).filter(c => catAllows(W, c, t)).forEach(cid => { W.entries.push(newEntry(W, cid, t.id)); notes.push(...adaptSchedule(W, catOf(W, cid))); });
         log('Зареєстровано команду', `${t.name} (${t.school}); категорії: ${(body.categories || []).map(id => (catOf(W, id) || {}).name).join(', ')}. ${notes.join(' ')}`);
         return { ok: true, id: t.id, notes };
       });
@@ -591,7 +600,7 @@ const Backend = (function () {
           if (!c.name) fail('Вкажіть назву команди');
           Object.assign(t, c);
           if (Array.isArray(body.categories)) {
-            const want = new Set(body.categories.filter(c => catOf(W, c)));
+            const want = new Set(body.categories.filter(c => catAllows(W, c, t)));
             const have = W.entries.filter(e => e.teamId === t.id);
             have.filter(e => !want.has(e.categoryId)).forEach(e => { W.entries = W.entries.filter(x => x.id !== e.id); W.runs = W.runs.filter(r => !(r.categoryId === e.categoryId && r.teamId === t.id)); notes.push(`Знято з «${catOf(W, e.categoryId).name}».`); notes.push(...adaptSchedule(W, catOf(W, e.categoryId))); });
             want.forEach(cid => { if (!have.some(e => e.categoryId === cid)) { W.entries.push(newEntry(W, cid, t.id)); notes.push(`Додано до «${catOf(W, cid).name}».`); notes.push(...adaptSchedule(W, catOf(W, cid))); } });
@@ -615,6 +624,7 @@ const Backend = (function () {
         const cat = catOf(W, body.categoryId);
         if (!cat || !W.teams.some(t => t.id === body.teamId)) fail('Невірні дані');
         if (W.entries.some(e => e.categoryId === cat.id && e.teamId === body.teamId)) fail('Команда вже зареєстрована в цій категорії');
+        if (!catAllows(W, cat.id, W.teams.find(t => t.id === body.teamId))) fail('Особиста участь можлива лише в категорії «Робо-біатлон»');
         W.entries.push(newEntry(W, cat.id, body.teamId));
         const notes = adaptSchedule(W, cat);
         log(`${cat.name}: додано команду`, `${teamName(W, body.teamId)}. ${notes.join(' ')}`);
@@ -631,6 +641,7 @@ const Backend = (function () {
           const to = catOf(W, body.categoryId);
           if (!to || to.id === cat.id) fail('Оберіть іншу категорію');
           if (W.entries.some(x => x.categoryId === to.id && x.teamId === e.teamId)) fail('Команда вже зареєстрована в цій категорії');
+          if (!catAllows(W, to.id, W.teams.find(t => t.id === e.teamId))) fail('Особиста участь можлива лише в категорії «Робо-біатлон»');
           W.runs = W.runs.filter(r => !(r.categoryId === cat.id && r.teamId === e.teamId));
           e.categoryId = to.id; e.group = null; e.order = W.entries.filter(x => x.categoryId === to.id).length + 1;
           notes = adaptSchedule(W, cat).concat(adaptSchedule(W, to));

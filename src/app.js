@@ -366,7 +366,7 @@ function rankTable(c, rank) {
   ${rank.map(r => {
     const t = team(r.teamId);
     const v = c.type === 'maze' ? r.points : r.result;
-    return `<tr><td class="c num">${r.place ? medal(r.place) + ' ' + r.place : '—'}</td><td><b>${esc(t.name)}</b></td><td class="small">${esc(t.school)}<br><span class="muted">${esc(t.settlement)}</span></td>${k === 'match' ? `<td class="c nowrap">${esc(r.resultText)}</td>` : `<td>${esc(r.resultText)}</td>`}<td><div class="hbar"><div class="bar"><i style="width:${v ? Math.max(3, Math.abs(v) / maxV * 100) : 0}%"></i></div><b class="num">${v === null || v === undefined ? '—' : fmt(v, 2)}</b></div></td></tr>`;
+    return `<tr><td class="c num">${r.place ? medal(r.place) + ' ' + r.place : '—'}</td><td><b>${esc(t.name)}</b>${t.individual ? ' <span class="chip" title="Особиста участь">👤 особисто</span>' : ''}</td><td class="small">${esc(t.school)}<br><span class="muted">${esc(t.settlement)}</span></td>${k === 'match' ? `<td class="c nowrap">${esc(r.resultText)}</td>` : `<td>${esc(r.resultText)}</td>`}<td><div class="hbar"><div class="bar"><i style="width:${v ? Math.max(3, Math.abs(v) / maxV * 100) : 0}%"></i></div><b class="num">${v === null || v === undefined ? '—' : fmt(v, 2)}</b></div></td></tr>`;
   }).join('')}</table></div>`;
 }
 
@@ -451,14 +451,15 @@ function teamsTab(c) {
     <select id="addTeamSel" style="max-width:340px"><option value="">— додати зареєстровану команду —</option>${others.map(t => `<option value="${t.id}">${esc(t.name)} (${esc(t.school).slice(0, 50)})</option>`).join('')}</select>
     <button class="btn pri" data-act="addEntry" data-cat="${c.id}">+ Додати</button>
     <button class="btn" data-act="newTeam" data-cat="${c.id}">+ Нова команда</button>
+    ${T[c.type].individualAllowed ? `<button class="btn" data-act="newPerson" data-cat="${c.id}">👤 + Особиста участь</button>` : ''}
     <span class="grow"></span>
     ${k === 'match' ? `<button class="btn org" data-act="redraw" data-cat="${c.id}">🎲 Повторне жеребкування груп</button>` : `<button class="btn org" data-act="shuffle" data-cat="${c.id}">🎲 Жеребкування черги виступів</button>`}
   </div><div class="small muted" style="margin-top:8px">Після додавання, зняття чи перенесення команди перелік матчів адаптується автоматично: нова команда потрапляє до найменшої групи, зіграні матчі зберігаються.</div></div>` : ''}
-  <div class="card flat tbl-wrap"><table class="t"><tr>${k === 'match' ? '<th>Група</th>' : '<th class="c">Черга</th>'}<th>Команда</th><th>Заклад освіти</th><th>Населений пункт</th><th>Учасники</th>${adm ? '<th></th>' : ''}</tr>
+  <div class="card flat tbl-wrap"><table class="t"><tr>${k === 'match' ? '<th>Група</th>' : '<th class="c">Черга</th>'}<th>${T[c.type].individualAllowed ? 'Команда / учасник' : 'Команда'}</th><th>Заклад освіти</th><th>Населений пункт</th><th>Учасники</th>${adm ? '<th></th>' : ''}</tr>
   ${ents.map(e => {
     const t = team(e.teamId);
     return `<tr><td>${k === 'match' ? (adm ? `<select data-change="group" data-id="${e.id}" style="width:70px">${groups.map(g => `<option ${g === e.group ? 'selected' : ''}>${g}</option>`).join('')}</select>` : `<span class="chip grp">${esc(e.group || '—')}</span>`) : `<span class="num">${e.order || ''}</span>`}</td>
-    <td><b>${esc(t.name)}</b></td><td class="small">${esc(t.school)}</td><td class="small">${esc(t.settlement) || '<span class="muted">—</span>'}</td>
+    <td><b>${esc(t.name)}</b>${t.individual ? ' <span class="chip" title="Особиста участь">👤 особисто</span>' : ''}</td><td class="small">${esc(t.school)}</td><td class="small">${esc(t.settlement) || '<span class="muted">—</span>'}</td>
     <td class="small">${(t.members || []).map(m => esc([m.surname, m.name].join(' ')) + (m.birthdate ? ` <span class="muted">${m.birthdate.split('-').reverse().join('.')}</span>` : '')).join('<br>')}</td>
     ${adm ? `<td class="nowrap"><button class="btn sm" data-act="editTeam" data-id="${t.id}">✏</button>
       <select data-change="move" data-id="${e.id}" style="width:auto;display:inline-block"><option value="">Перенести в…</option>${cats().filter(x => x.id !== c.id).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
@@ -719,21 +720,22 @@ let teamSearch = '';
 function teamsView() {
   const q = teamSearch.toLowerCase();
   const list = S.teams.filter(t => !q || (t.name + ' ' + t.school + ' ' + t.settlement + ' ' + t.members.map(m => m.surname + ' ' + m.name).join(' ')).toLowerCase().indexOf(q) >= 0).sort((a, b) => a.name.localeCompare(b.name));
-  return `<div class="row"><h1 class="grow">👥 Команди та учасники</h1><button class="btn" data-act="doc" data-kind="registry">⬇ Реєстраційна відомість</button><button class="btn pri" data-act="newTeam">+ Зареєструвати команду</button></div>
+  return `<div class="row"><h1 class="grow">👥 Команди та учасники</h1><button class="btn" data-act="doc" data-kind="registry">⬇ Реєстраційна відомість</button><button class="btn" data-act="newPerson">👤 + Особиста участь</button><button class="btn pri" data-act="newTeam">+ Зареєструвати команду</button></div>
   <input placeholder="Пошук за назвою, закладом, населеним пунктом, учасником…" data-change="teamSearch" value="${esc(teamSearch)}" style="margin:10px 0 14px;max-width:520px">
   <div class="card flat tbl-wrap"><table class="t"><tr><th>Команда</th><th>Заклад освіти</th><th>Населений пункт</th><th>Учасники</th><th>Категорії</th><th></th></tr>
   ${list.map(t => {
     const cs = S.entries.filter(e => e.teamId === t.id).map(e => cat(e.categoryId)).filter(Boolean);
     const noBirth = t.members.some(m => !m.birthdate);
-    return `<tr><td><b>${esc(t.name)}</b></td><td class="small">${esc(t.school)}</td><td class="small">${esc(t.settlement) || '<span class="chip warn">не вказано</span>'}</td>
+    return `<tr><td><b>${esc(t.name)}</b>${t.individual ? ' <span class="chip" title="Особиста участь">👤 особисто</span>' : ''}</td><td class="small">${esc(t.school)}</td><td class="small">${esc(t.settlement) || '<span class="chip warn">не вказано</span>'}</td>
     <td class="small">${t.members.map(m => esc(m.surname + ' ' + m.name)).join('<br>')}${noBirth ? '<br><span class="chip warn">немає дат народження</span>' : ''}</td>
     <td>${cs.map(c => `<span class="chip" style="margin:1px">${T[c.type].icon} ${esc(c.name)}</span>`).join(' ')}</td>
     <td class="nowrap"><button class="btn sm" data-act="editTeam" data-id="${t.id}">✏ Редагувати</button></td></tr>`;
   }).join('')}</table></div>`;
 }
 
-function teamModal(t, presetCat) {
-  t = t || { name: '', school: '', settlement: '', members: [{ surname: '', name: '', patronymic: '', birthdate: '' }] };
+function teamModal(t, presetCat, individual) {
+  t = t || { name: '', school: '', settlement: '', individual: !!individual, members: [{ surname: '', name: '', patronymic: '', birthdate: '' }] };
+  if (t.individual) return personModal(t, presetCat);
   const inCats = t.id ? S.entries.filter(e => e.teamId === t.id).map(e => e.categoryId) : (presetCat ? [presetCat] : []);
   const schools = Array.from(new Set(S.teams.map(x => x.school).filter(Boolean)));
   const places = Array.from(new Set(S.teams.map(x => x.settlement).filter(Boolean)));
@@ -749,6 +751,24 @@ function teamModal(t, presetCat) {
     <div class="checks">${cats().map(c => `<label><input type="checkbox" name="cat" value="${c.id}" ${inCats.indexOf(c.id) >= 0 ? 'checked' : ''}> ${T[c.type].icon} ${esc(c.name)}</label>`).join('')}</div>
     <div class="row" style="margin-top:18px"><button class="btn pri">💾 Зберегти</button><button type="button" class="btn" data-act="closeModal">Скасувати</button>
     ${t.id ? `<button type="button" class="btn danger right" data-act="delTeam" data-id="${t.id}">Видалити команду повністю</button>` : ''}</div>
+  </form>`);
+}
+/* Особиста участь окремого учасника (Робо-біатлон) */
+function personModal(t, presetCat) {
+  const inCats = t.id ? S.entries.filter(e => e.teamId === t.id).map(e => e.categoryId) : (presetCat ? [presetCat] : cats().filter(c => T[c.type].individualAllowed).map(c => c.id));
+  const m = t.members[0] || { surname: '', name: '', patronymic: '', birthdate: '' };
+  const schools = Array.from(new Set(S.teams.map(x => x.school).filter(Boolean)));
+  const places = Array.from(new Set(S.teams.map(x => x.settlement).filter(Boolean)));
+  openModal(`<h2>👤 ${t.id ? 'Редагування особистого учасника' : 'Реєстрація особистої участі'}</h2>
+  <div class="small muted">Учасник виступає самостійно, без команди. У таблицях і протоколах він відображається за прізвищем та ім’ям.</div>
+  <form id="teamForm" data-id="${t.id || ''}"><input type="hidden" name="individual" value="1">
+    <div class="member-row" style="margin-top:12px"><input placeholder="Прізвище *" data-f="surname" value="${esc(m.surname)}" required><input placeholder="Ім’я *" data-f="name" value="${esc(m.name)}" required><input placeholder="По батькові" data-f="patronymic" value="${esc(m.patronymic || '')}"><input type="date" data-f="birthdate" value="${esc(m.birthdate || '')}" title="Дата народження"><span></span></div>
+    <label>Заклад освіти</label><input name="school" value="${esc(t.school)}" list="schoolsList"><datalist id="schoolsList">${schools.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+    <label>Населений пункт</label><input name="settlement" value="${esc(t.settlement)}" list="placesList" placeholder="напр. м. Полтава"><datalist id="placesList">${places.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+    <label style="margin-top:14px">Категорія</label>
+    <div class="checks">${cats().filter(c => T[c.type].individualAllowed).map(c => `<label><input type="checkbox" name="cat" value="${c.id}" ${inCats.indexOf(c.id) >= 0 ? 'checked' : ''}> ${T[c.type].icon} ${esc(c.name)}</label>`).join('')}</div>
+    <div class="row" style="margin-top:18px"><button class="btn pri">💾 Зберегти</button><button type="button" class="btn" data-act="closeModal">Скасувати</button>
+    ${t.id ? `<button type="button" class="btn danger right" data-act="delTeam" data-id="${t.id}">Видалити учасника</button>` : ''}</div>
   </form>`);
 }
 function memberRow(m) {
@@ -996,6 +1016,7 @@ const ACT = {
   runDel: async () => { if (!confirm('Видалити цей результат?')) return; await api('DELETE', '/api/runs/' + RUN.id); closeModal(); },
   // адміністрування
   newTeam: el => teamModal(null, el.dataset.cat),
+  newPerson: el => teamModal(null, el.dataset.cat, true),
   editTeam: el => teamModal(JSON.parse(JSON.stringify(S.teams.find(t => t.id === el.dataset.id)))),
   addMember: () => { $('#members').insertAdjacentHTML('beforeend', memberRow({ surname: '', name: '', patronymic: '', birthdate: '' })); },
   rmMember: el => el.closest('.member-row').remove(),
@@ -1071,9 +1092,9 @@ async function onSubmit(f, fd) {
   if (f.id === 'pwForm') { await api('PUT', '/api/me/password', { old: fd.get('old'), new: fd.get('new') }); closeModal(); toast('Пароль змінено'); }
   if (f.id === 'teamForm') {
     const members = Array.from(f.querySelectorAll('.member-row')).map(r => { const o = {}; r.querySelectorAll('[data-f]').forEach(i => { o[i.dataset.f] = i.value; }); return o; });
-    const body = { name: fd.get('name'), school: fd.get('school'), settlement: fd.get('settlement'), members, categories: fd.getAll('cat') };
+    const body = { name: fd.get('name') || '', individual: fd.get('individual') === '1', school: fd.get('school'), settlement: fd.get('settlement'), members, categories: fd.getAll('cat') };
     const j = f.dataset.id ? await api('PUT', '/api/teams/' + f.dataset.id, body) : await api('POST', '/api/teams', body);
-    closeModal(); toast('Команду збережено'); notes(j);
+    closeModal(); toast('Збережено'); notes(j);
   }
   if (f.id === 'userForm') {
     const body = { name: fd.get('name'), login: fd.get('login'), role: fd.get('role') || undefined, categories: fd.getAll('cat') };
