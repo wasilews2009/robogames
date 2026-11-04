@@ -3,11 +3,10 @@
 const T = RG.TYPES;
 let S = null;              // стан із сервера
 let offset = 0;            // різниця годинника сервера
-let sseOk = false;
 let pendingRender = false;
 let soundOn = true;
 const LOGOS = [
-  { src: '/img/puet.png', alt: 'ПУЕТ' }, { src: '/img/pano.png', alt: 'ПАНО' }, { src: '/img/2d3d.png', alt: '2d:3d' }
+  { src: IMG.puet, alt: 'ПУЕТ' }, { src: IMG.pano, alt: 'ПАНО' }, { src: IMG.d2d3, alt: '2d:3d' }
 ];
 
 /* ================= утиліти ================= */
@@ -38,42 +37,21 @@ function toast(msg, err) {
   setTimeout(() => d.remove(), err ? 6000 : 3500);
 }
 async function api(method, url, body) {
-  const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
-  let j = {};
-  try { j = await r.json(); } catch (e) { /* */ }
-  if (r.status === 401 && url !== '/api/login') { S = null; render(); throw new Error(j.error || 'Потрібен вхід'); }
-  if (!r.ok) { toast(j.error || 'Помилка', true); throw new Error(j.error || 'Помилка'); }
-  return j;
+  try { return await Backend.handle(method, url, body); }
+  catch (e) { toast(e.message || 'Помилка', true); throw e; }
 }
 function notes(j) { (j && j.notes || []).forEach(n => toast(n)); }
 
-/* ================= завантаження та SSE ================= */
-async function loadState() {
-  try {
-    const r = await fetch('/api/state', { credentials: 'same-origin' });
-    if (r.status === 401) { S = null; return; }
-    const s = await r.json();
-    offset = s.serverNow - Date.now();
-    S = s;
-  } catch (e) { toast('Немає зв’язку з сервером', true); }
-}
-let es = null, reloadTimer = null;
-function connectSSE() {
-  if (es) es.close();
-  es = new EventSource('/api/events');
-  es.onopen = () => { sseOk = true; updateDot(); };
-  es.onerror = () => { sseOk = false; updateDot(); };
-  es.onmessage = ev => {
-    const msg = JSON.parse(ev.data);
-    if (msg.serverNow) offset = msg.serverNow - Date.now();
-    if (msg.type === 'timer' && S) { S.timers[msg.categoryId] = msg.timer; refreshTimers(true); }
-    if ((msg.type === 'state' || msg.type === 'hello') && S && msg.version !== S.version) {
-      clearTimeout(reloadTimer);
-      reloadTimer = setTimeout(async () => { await loadState(); softRender(); }, 150);
-    }
-  };
-}
-function updateDot() { const d = $('#dot'); if (d) { d.className = 'live-dot' + (sseOk ? ' ok' : ''); d.title = sseOk ? 'Онлайн: дані оновлюються автоматично' : 'Немає з’єднання'; } }
+/* ================= дані та живі оновлення ================= */
+function loadState() { S = Backend.state(); offset = Backend.offset; }
+function updateDot() { const d = $('#dot'); if (d) { d.className = 'live-dot ok'; } }
+Backend.onChange(() => {
+  const prev = S;
+  loadState();
+  if (!S || !prev || prev.me.id !== S.me.id) { MS = null; render(); return; }
+  refreshTimers(true);
+  softRender();
+});
 
 function softRender() {
   // не заважаємо, коли користувач вводить дані
@@ -121,9 +99,9 @@ function shell(r, body) {
   const curCat = r.name === 'cat' ? r.a : r.name === 'match' ? (S.matches.find(m => m.id === r.a) || {}).categoryId : null;
   return `
   <header class="topbar">
-    <a class="brand" href="#/"><img src="/img/robogames.png" alt="RoboGames-2026"><div><b>RoboGames-2026</b><span>Система суддівства</span></div></a>
+    <a class="brand" href="#/"><img src="${IMG.robogames}" alt="RoboGames-2026"><div><b>RoboGames-2026</b><span>Система суддівства</span></div></a>
     <nav class="nav">${nav.map(([k, l]) => `<a href="#/${k === 'home' ? '' : k}" class="${r.name === k ? 'on' : ''}">${l}</a>`).join('')}</nav>
-    <div class="user"><span id="dot" class="live-dot${sseOk ? ' ok' : ''}"></span>
+    <div class="user"><span class="chip ${S.mode === 'firebase' ? 'done' : 'warn'}" title="${S.mode === 'firebase' ? 'Дані синхронізуються між усіма пристроями через Firebase' : 'Локальний режим: дані зберігаються лише в цьому браузері'}">${S.mode === 'firebase' ? '☁ онлайн' : '💾 локально'}</span>
       <div class="small" style="text-align:right"><b>${esc(S.me.name)}</b><br><span class="muted">${isAdmin() ? 'Голова журі / адміністратор' : 'Суддя'}</span></div>
       <button class="btn sm ghost" data-act="pw" title="Змінити пароль">🔑</button>
       <button class="btn sm ghost" data-act="logout">Вийти</button></div>
@@ -145,25 +123,66 @@ function shell(r, body) {
 
 /* ================= вхід ================= */
 function loginView() {
+  if (Backend.fbSignedInNoProfile) return `<div class="login card"><img class="main-logo" src="${IMG.robogames}" alt=""><h2>Немає доступу</h2><div class="muted">Цей обліковий запис не зареєстровано в системі суддівства (можливо, адміністратор його видалив).</div><button class="btn pri" style="margin-top:14px" data-act="logout">Вийти</button></div>`;
+  const partners = `<div class="partners" style="border:none">${LOGOS.map(l => `<div class="lg"><img src="${l.src}" alt="${l.alt}"></div>`).join('')}</div>`;
+  if (Backend.needsBootstrap) {
+    return `<div class="login card">
+    <img class="main-logo" src="${IMG.robogames}" alt="RoboGames-2026">
+    <h2 style="margin-top:6px">Перший запуск із Firebase</h2>
+    <div class="muted small">База даних Firebase порожня. Створіть обліковий запис Голови журі (адміністратора). Команди з Excel завантажаться автоматично.</div>
+    <form id="bootForm">
+      <label>ПІБ Голови журі</label><input name="name" required>
+      <label>Логін (латиницею)</label><input name="login" required autocomplete="username">
+      <label>Пароль (від 6 символів)</label><input name="password" type="password" required minlength="6" autocomplete="new-password">
+      ${localHasData() ? '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" name="useLocal" style="width:18px;height:18px"> Перенести дані з локального режиму цього браузера</label>' : ''}
+      <button class="btn pri lg" style="width:100%;margin-top:16px">Створити та увійти</button>
+    </form>
+    <div class="row" style="margin-top:10px;justify-content:center"><button class="btn sm ghost" data-act="fbSetup">⚙ Змінити підключення</button></div>${partners}</div>`;
+  }
+  const fbm = Backend.mode === 'firebase';
   return `<div class="login card">
-    <img class="main-logo" src="/img/robogames.png" alt="RoboGames-2026">
+    <img class="main-logo" src="${IMG.robogames}" alt="RoboGames-2026">
     <h2 style="margin-top:6px">Система суддівства</h2>
     <div class="muted small">Обласні змагання з робототехніки «RoboGames-2026»</div>
+    <div style="margin-top:8px"><span class="chip ${fbm ? 'done' : 'warn'}">${fbm ? '☁ Спільний режим (Firebase): дані синхронізуються між пристроями' : '💾 Локальний режим: дані лише в цьому браузері'}</span></div>
     <form id="loginForm">
       <label>Логін</label><input name="login" autocomplete="username" autofocus>
       <label>Пароль</label><input name="password" type="password" autocomplete="current-password">
       <button class="btn pri lg" style="width:100%;margin-top:16px">Увійти</button>
     </form>
-    <div class="partners" style="border:none">${LOGOS.map(l => `<div class="lg"><img src="${l.src}" alt="${l.alt}"></div>`).join('')}</div>
+    ${!fbm ? '<div class="small muted" style="margin-top:10px">Перший вхід у локальному режимі: <b>admin</b> / <b>robogames2026</b></div>' : ''}
+    <div class="row" style="margin-top:10px;justify-content:center"><button class="btn sm ghost" data-act="fbSetup">⚙ Підключення Firebase</button></div>
+    ${partners}
   </div>`;
+}
+function localHasData() { try { return !!localStorage.getItem('robogames2026-db'); } catch (e) { return false; } }
+function fbModal() {
+  const cur = Backend.fbConfig;
+  openModal(`<h2>☁ Підключення Firebase</h2>
+  <div class="small muted">Вставте конфігурацію веб-застосунку з консолі Firebase (Project settings → Your apps → SDK setup and configuration → Config). Можна вставити весь фрагмент <code>const firebaseConfig = {...}</code>.</div>
+  <form id="fbForm"><textarea name="cfg" rows="10" style="margin-top:10px;font-family:monospace;font-size:12px" placeholder='{ "apiKey": "...", "authDomain": "...", "databaseURL": "https://...firebasedatabase.app", "projectId": "...", "appId": "..." }'>${cur ? esc(JSON.stringify(cur, null, 1)) : ''}</textarea>
+  <div class="row" style="margin-top:12px"><button class="btn pri">Підключити</button><button type="button" class="btn" data-act="closeModal">Скасувати</button>${cur ? '<button type="button" class="btn danger right" data-act="fbOff">Відключити на цьому пристрої</button>' : ''}</div></form>`);
+}
+function parseFbConfig(txt) {
+  let t = String(txt || '').trim();
+  const i = t.indexOf('{'), j = t.lastIndexOf('}');
+  if (i < 0 || j < i) throw new Error('Не знайдено об’єкт конфігурації { ... }');
+  t = t.slice(i, j + 1);
+  let o;
+  try { o = JSON.parse(t); } catch (e) {
+    try { o = Function('"use strict";return (' + t + ')')(); } catch (e2) { throw new Error('Не вдалося прочитати конфігурацію'); }
+  }
+  if (!o || !o.apiKey || !o.projectId) throw new Error('У конфігурації немає apiKey або projectId');
+  if (!o.databaseURL) throw new Error('У конфігурації немає databaseURL — спершу створіть Realtime Database у консолі Firebase і скопіюйте конфіг ще раз');
+  return o;
 }
 document.addEventListener('submit', async ev => {
   if (ev.target.id === 'loginForm') {
     ev.preventDefault();
     const f = new FormData(ev.target);
     try {
-      await api('POST', '/api/login', { login: f.get('login'), password: f.get('password') });
-      await loadState(); connectSSE(); render();
+      await Backend.login(f.get('login'), f.get('password'));
+      loadState(); render();
     } catch (e) { toast(e.message, true); }
   }
 });
@@ -179,7 +198,7 @@ function homeView() {
   const live = S.matches.filter(m => m.status === 'live');
   const meta = S.meta || {};
   return `
-  <div class="hero"><img src="/img/robogames.png" alt="">
+  <div class="hero"><img src="${IMG.robogames}" alt="">
     <div><h1>${esc(meta.title || 'RoboGames-2026')}</h1><div class="muted">${esc([meta.place, meta.date && meta.date.split('-').reverse().join('.')].filter(Boolean).join(' · '))}</div>
     <div class="row" style="margin-top:10px">${LOGOS.map(l => `<span style="background:#fff;border-radius:8px;padding:4px 8px;display:inline-flex"><img src="${l.src}" style="height:30px" alt="${l.alt}"></span>`).join('')}</div></div></div>
   <div class="grid g4" style="margin-bottom:16px">
@@ -412,7 +431,7 @@ function resultsTab(c) {
 
 /* ----- документи ----- */
 function docsTab(c) {
-  const doc = (kind, title, desc) => `<div class="card flat"><h3>${title}</h3><div class="small muted" style="min-height:38px">${desc}</div><div class="row" style="margin-top:10px"><a class="btn pri" href="/api/docs/${kind}?cat=${c.id}">⬇ Word (.docx)</a><a class="btn" target="_blank" href="/api/docs/${kind}?cat=${c.id}&format=html">🖨 Друк / PDF</a></div></div>`;
+  const doc = (kind, title, desc) => `<div class="card flat"><h3>${title}</h3><div class="small muted" style="min-height:38px">${desc}</div><div class="row" style="margin-top:10px"><button class="btn pri" data-act="doc" data-kind="${kind}" data-cat="${c.id}">⬇ Word (.docx)</button><button class="btn" data-act="doc" data-kind="${kind}" data-cat="${c.id}" data-format="html">🖨 Друк / PDF</button></div></div>`;
   return `<div class="grid g3">
     ${doc('protocol', '📄 Протокол суддівства', 'Усі матчі/виступи з рахунками, турнірні таблиці, плей-оф, підсумковий рейтинг. Місця для підписів суддів категорії та Голови журі.')}
     ${doc('summary', '📊 Зведена відомість', 'Місця команд із закладом освіти, населеним пунктом, складом учасників і балами. Підписи суддів і Голови журі.')}
@@ -666,7 +685,7 @@ function timerFullView(cid) {
   const m = t.matchId ? S.matches.find(x => x.id === t.matchId) : null;
   const sc = m ? RG.matchScore(c.type, m.data, RG.settingsOf(c)) : null;
   return `<div class="timer-full" data-timer="${cid}">
-    <img class="logo" src="/img/robogames.png" alt="">
+    <img class="logo" src="${IMG.robogames}" alt="">
     <div class="lbl">${T[c.type].icon} ${esc(c.name)}${t.label && !m ? ' · ' + esc(t.label) : ''}</div>
     ${m ? `<div class="vs"><span class="A">${esc(tn(m.teamA))}</span> <span style="color:#fff">${sc.a} : ${sc.b}</span> <span class="B">${esc(tn(m.teamB))}</span></div>` : ''}
     <div class="digits">00:00.0</div>
@@ -684,7 +703,7 @@ function summaryView() {
   const matrix = `<div class="card flat tbl-wrap" style="margin-top:18px"><h3>Команди × категорії (місця)</h3><table class="t"><tr><th>Команда</th><th>Населений пункт</th>${cs.map(c => `<th class="c" title="${esc(c.name)}">${T[c.type].icon}<br><span class="tiny">${esc(c.name)}</span></th>`).join('')}</tr>
     ${teamIds.map(id => `<tr><td><b>${esc(tn(id))}</b><div class="tiny muted">${esc(team(id).school).slice(0, 60)}</div></td><td class="small">${esc(team(id).settlement)}</td>${cs.map(c => { const r = ranks[c.id].find(x => x.teamId === id); return `<td class="c">${r ? (r.place ? `<b>${medal(r.place) || r.place}</b>` : '<span class="muted">·</span>') : ''}</td>`; }).join('')}</tr>`).join('')}</table></div>`;
   return `<div class="row"><h1 class="grow">📊 Зведена таблиця результатів</h1>
-    <a class="btn pri" href="/api/docs/overall">⬇ Зведена відомість (.docx)</a><a class="btn" target="_blank" href="/api/docs/overall?format=html">🖨 Друк</a></div>
+    <button class="btn pri" data-act="doc" data-kind="overall">⬇ Зведена відомість (.docx)</button><button class="btn" data-act="doc" data-kind="overall" data-format="html">🖨 Друк</button></div>
   <div class="muted small" style="margin-bottom:14px">Оновлюється в реальному часі. Доступна всім суддям.</div>
   <div class="grid g2">${cs.map(c => {
     const p = RG.progress(S, c);
@@ -700,7 +719,7 @@ let teamSearch = '';
 function teamsView() {
   const q = teamSearch.toLowerCase();
   const list = S.teams.filter(t => !q || (t.name + ' ' + t.school + ' ' + t.settlement + ' ' + t.members.map(m => m.surname + ' ' + m.name).join(' ')).toLowerCase().indexOf(q) >= 0).sort((a, b) => a.name.localeCompare(b.name));
-  return `<div class="row"><h1 class="grow">👥 Команди та учасники</h1><a class="btn" href="/api/docs/registry">⬇ Реєстраційна відомість</a><button class="btn pri" data-act="newTeam">+ Зареєструвати команду</button></div>
+  return `<div class="row"><h1 class="grow">👥 Команди та учасники</h1><button class="btn" data-act="doc" data-kind="registry">⬇ Реєстраційна відомість</button><button class="btn pri" data-act="newTeam">+ Зареєструвати команду</button></div>
   <input placeholder="Пошук за назвою, закладом, населеним пунктом, учасником…" data-change="teamSearch" value="${esc(teamSearch)}" style="margin:10px 0 14px;max-width:520px">
   <div class="card flat tbl-wrap"><table class="t"><tr><th>Команда</th><th>Заклад освіти</th><th>Населений пункт</th><th>Учасники</th><th>Категорії</th><th></th></tr>
   ${list.map(t => {
@@ -749,8 +768,8 @@ function userModal(u) {
   u = u || { login: '', name: '', role: 'judge', categories: [] };
   openModal(`<h2>${u.id ? '✏ Редагування' : '+ Новий суддя'}</h2><form id="userForm" data-id="${u.id || ''}">
     <label>ПІБ (буде в протоколах) *</label><input name="name" value="${esc(u.name)}" required>
-    <label>Логін *</label><input name="login" value="${esc(u.login)}" required autocomplete="off">
-    <label>${u.id ? 'Новий пароль (залиште порожнім, щоб не змінювати)' : 'Пароль *'}</label><input name="password" type="text" autocomplete="off" ${u.id ? '' : 'required'} placeholder="від 4 символів">
+    <label>Логін *${S.mode === 'firebase' ? ' (латиницею)' : ''}</label><input name="login" value="${esc(u.login)}" required autocomplete="off" ${u.id && S.mode === 'firebase' ? 'readonly' : ''}>
+    ${u.id && S.mode === 'firebase' ? '<div class="small muted" style="margin-top:8px">Пароль суддя змінює сам після входу (кнопка 🔑).</div>' : `<label>${u.id ? 'Новий пароль (залиште порожнім, щоб не змінювати)' : 'Пароль *'}</label><input name="password" type="text" autocomplete="off" ${u.id ? '' : 'required'} placeholder="від ${S.mode === 'firebase' ? 6 : 4} символів">`}
     <label>Роль</label><select name="role" ${u.id === S.me.id ? 'disabled' : ''}><option value="judge" ${u.role === 'judge' ? 'selected' : ''}>Суддя</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Адміністратор (Голова журі)</option></select>
     <label>Закріплені категорії</label><div class="checks">${cats().map(c => `<label><input type="checkbox" name="cat" value="${c.id}" ${(u.categories || []).indexOf(c.id) >= 0 ? 'checked' : ''}> ${T[c.type].icon} ${esc(c.name)}</label>`).join('')}</div>
     <div class="row" style="margin-top:18px"><button class="btn pri">💾 Зберегти</button><button type="button" class="btn" data-act="closeModal">Скасувати</button></div></form>`);
@@ -766,8 +785,14 @@ function settingsView() {
     <label>Дата</label><input name="date" type="date" value="${esc(m.date)}">
     <label>Голова журі (ПІБ для підписів у протоколах)</label><input name="chairName" value="${esc(m.chairName)}">
     <button class="btn pri" style="margin-top:12px">💾 Зберегти</button></form></div>
-  <div class="card flat"><h3>Резервні копії</h3><div class="small muted">Система автоматично зберігає копію бази кожні 5 хвилин у папку data/backups. Тут можна завантажити копію вручну або відновити дані з файлу.</div>
-    <div class="row" style="margin-top:12px"><a class="btn pri" href="/api/backup">⬇ Завантажити резервну копію</a><label class="btn" style="margin:0;color:var(--text)">⬆ Відновити з файлу<input type="file" accept=".json" data-change="restore" style="display:none"></label></div></div>
+  <div class="card flat"><h3>${S.mode === 'firebase' ? '☁ Спільний режим (Firebase)' : '💾 Локальний режим'}</h3>
+    ${S.mode === 'firebase' ? `<div class="small muted">Дані зберігаються у Firebase (проєкт <b>${esc((Backend.fbConfig || {}).projectId || '')}</b>) і синхронізуються між усіма пристроями. Надішліть суддям посилання нижче: воно відкриває систему вже з підключенням.</div>
+      <div class="row" style="margin-top:12px"><button class="btn pri" data-act="fbCopy">🔗 Скопіювати посилання для суддів</button><button class="btn" data-act="fbSetup">⚙ Змінити конфігурацію</button></div>`
+      : `<div class="small muted">Зараз дані зберігаються лише в цьому браузері, тож судді з інших пристроїв їх не бачать. Щоб судді працювали паралельно зі своїх планшетів, підключіть безкоштовний Firebase (інструкція в README репозиторію).</div>
+      <div class="row" style="margin-top:12px"><button class="btn pri" data-act="fbSetup">☁ Підключити Firebase</button><button class="btn danger" data-act="resetLocal">Скинути локальні дані</button></div>`}
+  </div>
+  <div class="card flat"><h3>Резервні копії</h3><div class="small muted">Регулярно завантажуйте резервну копію (файл .json) — з неї можна відновити всі команди, матчі та бали.</div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" data-act="backup">⬇ Завантажити резервну копію</button><label class="btn" style="margin:0;color:var(--text)">⬆ Відновити з файлу<input type="file" accept=".json" data-change="restore" style="display:none"></label></div></div>
   </div>
   <h2 style="margin-top:20px">Категорії</h2><div class="grid g2">${cats().map(c => {
     const s = RG.settingsOf(c), def = T[c.type].timer;
@@ -853,8 +878,31 @@ function drawRun() {
 }
 
 /* ================= обробники подій ================= */
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function docData() { const d = Backend.rawData(); return { meta: d.meta || {}, categories: d.categories, teams: d.teams, entries: d.entries, matches: d.matches, runs: d.runs, users: d.users }; }
 const ACT = {
-  logout: async () => { await api('POST', '/api/logout'); S = null; if (es) es.close(); render(); },
+  doc: el => {
+    const kind = el.dataset.kind, c = el.dataset.cat ? cat(el.dataset.cat) : null;
+    const doc = DOCS[kind](docData(), c);
+    if (el.dataset.format === 'html') {
+      const w = window.open('', '_blank');
+      if (!w) return toast('Браузер заблокував нове вікно — дозвольте спливні вікна', true);
+      w.document.open(); w.document.write(DOCX.html(doc.blocks, { landscape: doc.landscape, title: doc.title })); w.document.close();
+      return;
+    }
+    download(DOCX.build(doc.blocks, { landscape: doc.landscape, title: doc.title }), `RoboGames2026-${{ protocol: 'protokol', summary: 'zvedena', scorecards: 'otsinochni-lysty', overall: 'zvedena-vsi', registry: 'reiestratsiia' }[kind]}${c ? '-' + c.type : ''}.docx`);
+  },
+  backup: () => download(new Blob([Backend.backupJson()], { type: 'application/json' }), 'robogames-backup-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json'),
+  fbSetup: () => fbModal(),
+  fbOff: () => { if (confirm('Перейти в локальний режим на цьому пристрої? Дані у Firebase залишаться.')) Backend.setFirebaseConfig(null); },
+  fbCopy: async () => { const l = Backend.shareLink(); try { await navigator.clipboard.writeText(l); toast('Посилання скопійовано'); } catch (e) { prompt('Скопіюйте посилання:', l); } },
+  resetLocal: () => { if (confirm('Видалити ВСІ локальні дані цього браузера і почати з початкових списків команд?')) Backend.resetLocal(); },
+  logout: async () => { await Backend.logout(); S = null; render(); },
   pw: () => openModal(`<h2>🔑 Зміна пароля</h2><form id="pwForm"><label>Поточний пароль</label><input name="old" type="password"><label>Новий пароль (від 6 символів)</label><input name="new" type="password"><div class="row" style="margin-top:14px"><button class="btn pri">Змінити</button><button type="button" class="btn" data-act="closeModal">Скасувати</button></div></form>`),
   closeModal,
   mfilter: el => { matchFilter = el.dataset.v; render(true); },
@@ -991,7 +1039,7 @@ document.addEventListener('change', async ev => {
   }
   if (k === 'restore') {
     const f = el.files[0]; if (!f) return;
-    if (!confirm('Відновити дані з файлу? Поточні дані буде замінено (попередню версію збережено в data/backups).')) return;
+    if (!confirm('Відновити дані з файлу? Поточні команди, матчі й бали буде замінено даними з файлу.')) return;
     try { const j = JSON.parse(await f.text()); await api('POST', '/api/restore', j); toast('Дані відновлено'); } catch (e) { toast('Не вдалося прочитати файл', true); }
   }
 });
@@ -1003,8 +1051,23 @@ document.addEventListener('input', ev => {
 document.addEventListener('submit', async ev => {
   const f = ev.target;
   if (f.id === 'loginForm') return;
+  if (!f.id && !f.classList.contains('catForm')) return;
   ev.preventDefault();
   const fd = new FormData(f);
+  try { await onSubmit(f, fd); } catch (e) { console.warn(e); }
+});
+async function onSubmit(f, fd) {
+  if (f.id === 'bootForm') {
+    try {
+      await Backend.bootstrapFirebase(fd.get('name'), fd.get('login'), fd.get('password'), !!fd.get('useLocal'));
+      loadState(); render(); toast('Базу ініціалізовано');
+    } catch (e) { toast(e.message, true); }
+    return;
+  }
+  if (f.id === 'fbForm') {
+    try { Backend.setFirebaseConfig(parseFbConfig(fd.get('cfg'))); } catch (e) { toast(e.message, true); }
+    return;
+  }
   if (f.id === 'pwForm') { await api('PUT', '/api/me/password', { old: fd.get('old'), new: fd.get('new') }); closeModal(); toast('Пароль змінено'); }
   if (f.id === 'teamForm') {
     const members = Array.from(f.querySelectorAll('.member-row')).map(r => { const o = {}; r.querySelectorAll('[data-f]').forEach(i => { o[i.dataset.f] = i.value; }); return o; });
@@ -1026,12 +1089,13 @@ document.addEventListener('submit', async ev => {
     await api('PUT', '/api/categories/' + f.dataset.id, { name: fd.get('name'), settings });
     toast('Налаштування категорії збережено');
   }
-});
+}
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeModal(); });
 
 /* ================= старт ================= */
 (async function start() {
-  await loadState();
-  if (S) connectSSE();
+  $('#app').innerHTML = '<div class="empty" style="margin:20vh auto;max-width:400px">Завантаження…</div>';
+  await Backend.start();
+  loadState();
   render();
 })();

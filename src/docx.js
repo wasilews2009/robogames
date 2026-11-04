@@ -1,13 +1,6 @@
+/* Генератор .docx у браузері (без залежностей) */
+const DOCX = (function () {
 'use strict';
-/* Мінімальний генератор .docx без зовнішніх залежностей.
- * Документ описується блоками:
- *  {t:'logos'} {t:'h1',text} {t:'h2',text} {t:'p',text,bold,italic,align,size}
- *  {t:'table',head:[..],rows:[[..]],widths:[..] (у відсотках),fontSize}
- *  {t:'signatures',items:[{role,name}]} {t:'pagebreak'} */
-const zlib = require('zlib');
-const fs = require('fs');
-const path = require('path');
-
 const CRC = (() => {
   const t = new Uint32Array(256);
   for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
@@ -15,32 +8,34 @@ const CRC = (() => {
 })();
 function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
 
+const enc = new TextEncoder();
+function u8(x) { return typeof x === 'string' ? enc.encode(x) : x; }
 function zip(files) {
   const parts = [], central = [];
   let offset = 0;
+  const hdr = (n) => { const b = new Uint8Array(n); return { b, v: new DataView(b.buffer) }; };
   for (const f of files) {
-    const name = Buffer.from(f.name, 'utf8');
-    const data = Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, 'utf8');
-    const comp = zlib.deflateRawSync(data);
+    const name = enc.encode(f.name);
+    const data = u8(f.data);
     const crc = crc32(data);
-    const lh = Buffer.alloc(30);
-    lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6); lh.writeUInt16LE(8, 8);
-    lh.writeUInt16LE(0, 10); lh.writeUInt16LE(0x21, 12); lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(comp.length, 18);
-    lh.writeUInt32LE(data.length, 22); lh.writeUInt16LE(name.length, 26); lh.writeUInt16LE(0, 28);
-    parts.push(lh, name, comp);
-    const ch = Buffer.alloc(46);
-    ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8);
-    ch.writeUInt16LE(8, 10); ch.writeUInt16LE(0, 12); ch.writeUInt16LE(0x21, 14); ch.writeUInt32LE(crc, 16);
-    ch.writeUInt32LE(comp.length, 20); ch.writeUInt32LE(data.length, 24); ch.writeUInt16LE(name.length, 28);
-    ch.writeUInt32LE(offset, 42);
-    central.push(ch, name);
-    offset += 30 + name.length + comp.length;
+    const L = hdr(30), v = L.v;
+    v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
+    v.setUint16(10, 0, true); v.setUint16(12, 0x21, true); v.setUint32(14, crc, true); v.setUint32(18, data.length, true);
+    v.setUint32(22, data.length, true); v.setUint16(26, name.length, true); v.setUint16(28, 0, true);
+    parts.push(L.b, name, data);
+    const C = hdr(46), w = C.v;
+    w.setUint32(0, 0x02014b50, true); w.setUint16(4, 20, true); w.setUint16(6, 20, true); w.setUint16(8, 0x0800, true);
+    w.setUint16(10, 0, true); w.setUint16(12, 0, true); w.setUint16(14, 0x21, true); w.setUint32(16, crc, true);
+    w.setUint32(20, data.length, true); w.setUint32(24, data.length, true); w.setUint16(28, name.length, true);
+    w.setUint32(42, offset, true);
+    central.push(C.b, name);
+    offset += 30 + name.length + data.length;
   }
-  const cd = Buffer.concat(central);
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10);
-  end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
-  return Buffer.concat(parts.concat([cd, end]));
+  const cdLen = central.reduce((a, b) => a + b.length, 0);
+  const E = hdr(22), e = E.v;
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdLen, true); e.setUint32(16, offset, true);
+  return new Blob(parts.concat(central, [E.b]), { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 function esc(s) {
@@ -90,15 +85,15 @@ function signatures(b, pageW) {
   return x + '</w:tbl>';
 }
 
-/* Логотипи: зчитуються один раз */
-const IMG_DIR = path.join(__dirname, '..', 'public', 'img');
+/* Логотипи — вбудовані в файл (window.IMG_B64) */
 const LOGOS = [
-  { file: 'robogames.png', h: 2.2 },
-  { file: 'puet.png', h: 1.2 },
-  { file: 'pano.png', h: 1.7 },
-  { file: '2d3d.png', h: 1.0 }
+  { file: 'robogames', h: 2.2 },
+  { file: 'puet', h: 1.2 },
+  { file: 'pano', h: 1.7 },
+  { file: '2d3d', h: 1.0 }
 ];
-function pngSize(buf) { return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) }; }
+function b64bytes(b64) { const bin = atob(b64); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+function pngSize(buf) { const v = new DataView(buf.buffer); return { w: v.getUint32(16), h: v.getUint32(20) }; }
 
 function drawing(rid, id, wcm, hcm) {
   const cx = Math.round(wcm * 360000), cy = Math.round(hcm * 360000);
@@ -125,9 +120,8 @@ function build(blocks, opts) {
   const media = [];
   if (blocks.some(b => b.t === 'logos')) {
     LOGOS.forEach((l, i) => {
-      const f = path.join(IMG_DIR, l.file);
-      if (!fs.existsSync(f)) return;
-      const data = fs.readFileSync(f);
+      if (!window.IMG_B64 || !window.IMG_B64[l.file]) return;
+      const data = b64bytes(window.IMG_B64[l.file]);
       const s = pngSize(data);
       media.push({ rid: 'rIdImg' + i, name: `media/logo${i}.png`, data, hcm: l.h, wcm: l.h * s.w / s.h });
     });
@@ -167,7 +161,7 @@ function html(blocks, opts) {
   const e = s => esc(s).replace(/\n/g, '<br>');
   let out = '';
   for (const b of blocks) {
-    if (b.t === 'logos') out += `<div class="logos">${LOGOS.map(l => `<img src="/img/${l.file}" style="height:${l.h * 0.9}cm">`).join('')}</div>`;
+    if (b.t === 'logos') out += `<div class="logos">${LOGOS.map(l => `<img src="data:image/png;base64,${window.IMG_B64[l.file]}" style="height:${l.h * 0.9}cm">`).join('')}</div>`;
     else if (b.t === 'h1') out += `<h1>${e(b.text)}</h1>`;
     else if (b.t === 'h2') out += `<h2>${e(b.text)}</h2>`;
     else if (b.t === 'h3') out += `<h3>${e(b.text)}</h3>`;
@@ -188,7 +182,9 @@ table.sig td{border:none;padding:14px 6px 2px;vertical-align:bottom}table.sig sm
 .logos{display:flex;justify-content:space-around;align-items:center;margin-bottom:8px}.pb{page-break-after:always}
 .bar{position:sticky;top:0;background:#fff;padding:8px 0;border-bottom:1px solid #ccc;margin-bottom:10px;font-family:sans-serif}
 .bar button{font-size:14px;padding:6px 14px;cursor:pointer}@media print{.bar{display:none}}
-</style></head><body><div class="bar"><button onclick="print()">🖨 Друкувати / зберегти PDF</button> <a href="${esc(opts.docxUrl || '#')}">⬇ Завантажити .docx</a></div>${out}</body></html>`;
+</style></head><body><div class="bar"><button onclick="print()">🖨 Друкувати / зберегти PDF</button></div>${out}</body></html>`;
 }
 
-module.exports = { build, html, zip };
+return { build, html };
+
+})();

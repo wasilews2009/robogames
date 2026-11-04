@@ -1,6 +1,6 @@
+const DOCS = (function () {
 'use strict';
 /* Формування протоколів і зведених відомостей (блоки для docx/html) */
-const RG = require('../public/logic.js');
 
 function ctx(db) {
   const teams = {}; db.teams.forEach(t => { teams[t.id] = t; });
@@ -240,4 +240,6 @@ function registry(db, cat) {
   return { blocks: b, landscape: true, title: 'Реєстраційна відомість' };
 }
 
-module.exports = { protocol, summary, scorecards, overall, registry };
+return { protocol, summary, scorecards, overall, registry };
+
+})();
