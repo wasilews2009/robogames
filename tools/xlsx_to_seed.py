@@ -1,4 +1,4 @@
-"""Перетворює Excel зі списками команд у seed.json для системи RoboGames."""
+"""Перетворює Excel зі списками команд у src/seed.json для системи RoboGames."""
 import json, re, sys, openpyxl
 
 SHEET_TO_CAT = {

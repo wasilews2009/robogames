@@ -1,0 +1,62 @@
+{
+  "rules": {
+    "setup": {
+      ".read": true,
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin' || (auth != null && !data.exists() && root.child('users/' + auth.uid + '/role').val() === 'admin')"
+    },
+    "users": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      "$uid": {
+        ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin' || (auth != null && $uid === auth.uid && !root.child('setup/initialized').exists() && newData.child('role').val() === 'admin')"
+      }
+    },
+    "meta": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+    "categories": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+    "teams": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+    "entries": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+    "pd": {
+      ".read": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+    "matches": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      "$id": {
+        ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin' || (auth != null && data.exists() && newData.exists() && newData.child('categoryId').val() === data.child('categoryId').val() && root.child('users/' + auth.uid + '/categories/' + data.child('categoryId').val()).exists())"
+      }
+    },
+    "runs": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      "$id": {
+        ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin' || (auth != null && ((newData.exists() && (!data.exists() || data.child('categoryId').val() === newData.child('categoryId').val()) && root.child('users/' + auth.uid + '/categories/' + newData.child('categoryId').val()).exists()) || (!newData.exists() && root.child('users/' + auth.uid + '/categories/' + data.child('categoryId').val()).exists())))"
+      }
+    },
+    "timers": {
+      ".read": "auth != null && root.child('users/' + auth.uid).exists()",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      "$cat": {
+        ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin' || (auth != null && root.child('users/' + auth.uid + '/categories/' + $cat).exists())"
+      }
+    },
+    "log": {
+      ".read": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+      "$id": {
+        ".write": "auth != null && root.child('users/' + auth.uid).exists() && !data.exists()"
+      }
+    }
+  }
+}

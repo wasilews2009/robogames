@@ -1,6 +1,6 @@
+const DOCS = (function () {
 'use strict';
 /* Формування протоколів і зведених відомостей (блоки для docx/html) */
-const RG = require('../public/logic.js');
 
 function ctx(db) {
   const teams = {}; db.teams.forEach(t => { teams[t.id] = t; });
@@ -45,11 +45,13 @@ function sigs(c, cat, opts) {
 }
 const STATUS = { scheduled: 'заплановано', live: 'триває', done: 'завершено' };
 
+/* «Команда» або «Команда / учасник» (особиста участь) */
+function TL(cat) { return cat && RG.TYPES[cat.type] && RG.TYPES[cat.type].individualAllowed ? 'Команда / учасник' : 'Команда'; }
 function placeText(r) { return r.place ? String(r.place) : '—'; }
 
 function rankingTable(c, cat, rank, full) {
   const type = RG.TYPES[cat.type];
-  const head = ['Місце', 'Команда', 'Заклад освіти', 'Населений пункт'];
+  const head = ['Місце', TL(cat), 'Заклад освіти', 'Населений пункт'];
   if (full) head.push('Учасники');
   const widths = full ? [7, 13, 27, 12, 21] : [8, 20, 40, 16];
   if (type.kind === 'match') { head.push('В-Н-П', 'Бали'); widths.push(9, 8); }
@@ -85,17 +87,17 @@ function protocol(db, cat) {
       b.push({ t: 'h2', text: `Група ${g.name}` });
       const gm = matches.filter(m => m.stage === 'group' && m.group === g.name);
       b.push({
-        t: 'table', head: ['№', 'Команда 1', 'Рахунок', 'Команда 2', 'Переможець', 'Статус', 'Суддя'],
-        widths: [5, 19, 20, 19, 15, 10, 12], center: [0, 2, 5],
+        t: 'table', head: ['№', TL(cat) + ' 1', 'Рахунок', TL(cat) + ' 2', 'Переможець', 'Статус'],
+        widths: [6, 22, 22, 22, 17, 11], center: [0, 2, 5],
         rows: gm.map(m => {
           const sc = RG.matchScore(cat.type, m.data, set);
           const done = m.status === 'done';
           const w = done ? (sc.a > sc.b ? c.tn(m.teamA) : sc.b > sc.a ? c.tn(m.teamB) : 'нічия') : '';
-          return [String(m.order), c.tn(m.teamA), done || m.status === 'live' ? sc.text : '', c.tn(m.teamB), w, STATUS[m.status], c.un(m.updatedBy)];
+          return [String(m.order), c.tn(m.teamA), done || m.status === 'live' ? sc.text : '', c.tn(m.teamB), w, STATUS[m.status]];
         })
       });
       b.push({
-        t: 'table', head: ['Місце', 'Команда', 'Ігор', 'В', 'Н', 'П', 'Очки (3/1/0)', 'Ігрові очки', 'Бали'],
+        t: 'table', head: ['Місце', TL(cat), 'Ігор', 'В', 'Н', 'П', 'Очки (3/1/0)', 'Ігрові очки', 'Бали'],
         widths: [8, 28, 8, 7, 7, 7, 12, 13, 10], center: [0, 2, 3, 4, 5, 6, 7, 8],
         rows: g.rows.map(r => [String(r.pos), c.tn(r.teamId), String(r.p), String(r.w), String(r.d), String(r.l), String(r.pts), `${r.gf}–${r.ga}`, String(r.rp)])
       });
@@ -105,25 +107,25 @@ function protocol(db, cat) {
       b.push({ t: 'h2', text: 'Плей-оф («Фінал чотирьох»)' });
       if (q.wildcard) b.push({ t: 'p', text: `Wildcard (найкраще 2-ге місце за середнім показником за матч): ${c.tn(q.wildcard)}`, size: 11 });
       b.push({
-        t: 'table', head: ['Етап', 'Команда 1', 'Рахунок', 'Команда 2', 'Переможець', 'Суддя'],
-        widths: [16, 19, 22, 19, 13, 11], center: [2],
+        t: 'table', head: ['Етап', TL(cat) + ' 1', 'Рахунок', TL(cat) + ' 2', 'Переможець'],
+        widths: [17, 22, 22, 22, 17], center: [2],
         rows: ['sf1', 'sf2', 'third', 'final'].map(s => po.find(m => m.stage === s)).filter(Boolean).map(m => {
           const sc = RG.matchScore(cat.type, m.data, set);
           const w = RG.winnerOf(cat, m);
-          return [RG.STAGES[m.stage], m.teamA ? c.tn(m.teamA) : 'визначається', m.status !== 'scheduled' ? sc.text : '', m.teamB ? c.tn(m.teamB) : 'визначається', w ? c.tn(w) : '', c.un(m.updatedBy)];
+          return [RG.STAGES[m.stage], m.teamA ? c.tn(m.teamA) : 'визначається', m.status !== 'scheduled' ? sc.text : '', m.teamB ? c.tn(m.teamB) : 'визначається', w ? c.tn(w) : ''];
         })
       });
     }
   } else if (cat.type === 'delivery') {
     const runs = db.runs.filter(r => r.categoryId === cat.id);
     b.push({
-      t: 'table', head: ['№', 'Команда', 'Доставлено вантажів', 'Коробок за межами (−5)', 'Інженерна книга', 'Час, с', 'Сума балів', 'Суддя'],
-      widths: [5, 22, 12, 13, 12, 9, 11, 16], center: [0, 2, 3, 4, 5, 6],
+      t: 'table', head: ['№', 'Команда', 'Доставлено вантажів', 'Коробок за межами (−5)', 'Інженерна книга', 'Час, с', 'Сума балів'],
+      widths: [6, 30, 13, 14, 13, 11, 13], center: [0, 2, 3, 4, 5, 6],
       rows: entries.sort((a, b) => (a.order || 0) - (b.order || 0)).map((e, i) => {
         const run = runs.find(r => r.teamId === e.teamId && r.round === 1);
-        if (!run) return [String(i + 1), c.tn(e.teamId), '', '', '', '', 'не виступала', ''];
+        if (!run) return [String(i + 1), c.tn(e.teamId), '', '', '', '', 'не виступала'];
         const s = RG.runScore(cat, run.data);
-        return [String(i + 1), c.tn(e.teamId), String(s.delivered), String(s.outside), String(s.book), s.time ? RG.fmtNum(s.time, 2) : '', String(s.total) + (run.status !== 'done' ? ' (не завершено)' : ''), c.un(run.updatedBy)];
+        return [String(i + 1), c.tn(e.teamId), String(s.delivered), String(s.outside), String(s.book), s.time ? RG.fmtNum(s.time, 2) : '', String(s.total) + (run.status !== 'done' ? ' (не завершено)' : '')];
       })
     });
   } else if (cat.type === 'maze') {
@@ -131,12 +133,12 @@ function protocol(db, cat) {
     b.push({ t: 'p', text: `Штраф за торкання стінки: +${set.penaltySec} с. Рейтинг: ${set.rankMode === 'sum' ? 'сума двох раундів' : 'найкращий раунд'}.`, size: 11 });
     const cell = (s, run) => !run ? ['', '', ''] : [s.time ? RG.fmtNum(s.time, 2) : '', String(s.touches), s.finished ? RG.fmtNum(s.adj, 2) : 'не фініш.'];
     b.push({
-      t: 'table', head: ['№', 'Команда', 'Р1: час, с', 'Р1: торк.', 'Р1: підсумок', 'Р2: час, с', 'Р2: торк.', 'Р2: підсумок', 'Суддя'],
-      widths: [5, 22, 10, 8, 11, 10, 8, 11, 15], center: [0, 2, 3, 4, 5, 6, 7],
+      t: 'table', head: ['№', 'Команда', 'Р1: час, с', 'Р1: торк.', 'Р1: підсумок', 'Р2: час, с', 'Р2: торк.', 'Р2: підсумок'],
+      widths: [6, 28, 11, 9, 12, 11, 9, 12], center: [0, 2, 3, 4, 5, 6, 7],
       rows: entries.sort((a, b) => (a.order || 0) - (b.order || 0)).map((e, i) => {
         const r1 = runs.find(r => r.teamId === e.teamId && r.round === 1);
         const r2 = runs.find(r => r.teamId === e.teamId && r.round === 2);
-        return [String(i + 1), c.tn(e.teamId)].concat(cell(r1 && RG.runScore(cat, r1.data), r1), cell(r2 && RG.runScore(cat, r2.data), r2), [[r1, r2].filter(Boolean).map(r => c.un(r.updatedBy)).filter((v, i, a) => v && a.indexOf(v) === i).join(', ')]);
+        return [String(i + 1), c.tn(e.teamId)].concat(cell(r1 && RG.runScore(cat, r1.data), r1), cell(r2 && RG.runScore(cat, r2.data), r2));
       })
     });
   } else if (cat.type === 'smart') {
@@ -187,7 +189,7 @@ function scorecards(db, cat) {
         return [String(i + 1), c.tn(e.teamId)].concat(crit.map(k => r ? String(sc[k.key] || 0) : ''), [r ? String(RG.runScore(cat, r.data).total) : '']);
       })
     });
-    b.push({ t: 'signatures', items: [{ role: 'Суддя', name: j.name }] });
+    b.push({ t: 'signatures', items: [{ role: 'Суддя', name: j.name }, { role: 'Голова журі', name: (c.db.meta || {}).chairName || '' }] });
   });
   return { blocks: b, landscape: true, title: `Оціночні листи — ${cat.name}` };
 }
@@ -231,7 +233,7 @@ function registry(db, cat) {
     if (!cat) b.push({ t: 'h2', text: k.name });
     if (!entries.length) { b.push({ t: 'p', text: 'Команди не зареєстровані.', italic: true }); return; }
     b.push({
-      t: 'table', head: ['№', 'Команда', 'Заклад освіти', 'Населений пункт', 'Учасники (прізвище, ім’я, дата народження)'],
+      t: 'table', head: ['№', TL(k), 'Заклад освіти', 'Населений пункт', 'Учасники (прізвище, ім’я, дата народження)'],
       widths: [5, 15, 33, 14, 33], center: [0],
       rows: entries.map((e, i) => { const t = c.teams[e.teamId] || {}; return [String(i + 1), t.name, t.school, t.settlement, (t.members || []).map(m => memberLine(m, true)).join('\n')]; })
     });
@@ -240,4 +242,6 @@ function registry(db, cat) {
   return { blocks: b, landscape: true, title: 'Реєстраційна відомість' };
 }
 
-module.exports = { protocol, summary, scorecards, overall, registry };
+return { protocol, summary, scorecards, overall, registry };
+
+})();
