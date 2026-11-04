@@ -1,0 +1,10 @@
+{
+  "name": "robogames-judging",
+  "version": "1.0.0",
+  "description": "Система суддівства обласних змагань з робототехніки RoboGames-2026",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED",
+  "private": true
+}

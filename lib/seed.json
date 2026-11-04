@@ -1,0 +1,640 @@
+{
+ "teams": [
+  {
+   "id": "t1",
+   "name": "Винахідники",
+   "school": "Андріївський ліцей Полтавської обласної ради",
+   "settlement": "",
+   "members": [
+    {
+     "surname": "Тохтаєв",
+     "name": "Рустам",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Гайко",
+     "name": "Богдан",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Гнатишак",
+     "name": "Ярослав",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t2",
+   "name": "Winter",
+   "school": "Комунальний заклад вищої освіти Кременчуцька гуманітарно-технологічна академія",
+   "settlement": "м. Кременчук",
+   "members": [
+    {
+     "surname": "Пашков",
+     "name": "Єгор",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Роговий",
+     "name": "Назар",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Ульянов",
+     "name": "Артем",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t3",
+   "name": "Bambuki",
+   "school": "Науковий ліцей \"Політ\" Комунального закладу вищої освіти Кременчуцька гуманітарно-технологічна академія Полтавської обласної ради",
+   "settlement": "м. Кременчук",
+   "members": [
+    {
+     "surname": "Кривонос",
+     "name": "Нестор",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Дмитренко",
+     "name": "Матвій",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Скиба",
+     "name": "Єгор",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t4",
+   "name": "Юні робототехніки",
+   "school": "Гадяцький профільний ліцей імені Т. Г. Шевченка Полтавської обласної ради",
+   "settlement": "м. Гадяч",
+   "members": [
+    {
+     "surname": "Гресь",
+     "name": "Анастасія",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Балясна",
+     "name": "Альбіна",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t5",
+   "name": "Єноти",
+   "school": "Гімназія №25 Полтавської міської ради",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Лисівненка",
+     "name": "Олександр",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Назаренко",
+     "name": "Даніїл",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Щербаха",
+     "name": "Артем",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t6",
+   "name": "БЕРИЛ",
+   "school": "Гадяцький профільний ліцей імені Т. Г. Шевченка Полтавської обласної ради",
+   "settlement": "м. Гадяч",
+   "members": [
+    {
+     "surname": "Шелковий",
+     "name": "Всеволод",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t7",
+   "name": "МРЦ",
+   "school": "Комунальний заклад \"Польтавський міжшкільний ресурсний центр Полтавської міської ради\"",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Бровко",
+     "name": "Валерій",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Ярміш",
+     "name": "Артем",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Горбенко",
+     "name": "Денис",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t8",
+   "name": "Witchers",
+   "school": "Полтавський фаховий коледж Полтавського університету економіки і торгівлі",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Столярчук",
+     "name": "Назар",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Гурінов",
+     "name": "Олександр",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Матвієнко",
+     "name": "Соломія",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t9",
+   "name": "R2D2",
+   "school": "Ліцей №21 міста Київ",
+   "settlement": "м. Київ",
+   "members": [
+    {
+     "surname": "Шамота",
+     "name": "Іван",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Смоляренко",
+     "name": "Артем",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Скальська",
+     "name": "Ірина",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Кравець",
+     "name": "Владислав",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Васильєв",
+     "name": "Гліб",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t10",
+   "name": "Iron Drone",
+   "school": "Опорний заклад «Гімназія №3 імені В.О.Нижниченка Горішньоплавнівської міської ради Кременчуцького району Полтавської області»",
+   "settlement": "м. Горішні Плавні",
+   "members": [
+    {
+     "surname": "Намінас",
+     "name": "Василій",
+     "patronymic": "Олександрович",
+     "birthdate": ""
+    },
+    {
+     "surname": "Дерновий",
+     "name": "Максим",
+     "patronymic": "Геннадійович",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t11",
+   "name": "Tech Titans",
+   "school": "Шишацький ліцей Полтавської обласної ради",
+   "settlement": "смт Шишаки",
+   "members": [
+    {
+     "surname": "Меркушин",
+     "name": "Ілля",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Іваниця",
+     "name": "Ярослав",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Кармазин",
+     "name": "Артур",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t12",
+   "name": "Irone Drone",
+   "school": "Опорний заклад «Гімназія №3 імені В.О.Нижниченка Горішньоплавнівської міської ради Кременчуцького району Полтавської області»",
+   "settlement": "м. Горішні Плавні",
+   "members": [
+    {
+     "surname": "Намінас",
+     "name": "Василій",
+     "patronymic": "Олександрович",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t13",
+   "name": "Irone Drone 2",
+   "school": "Опорний заклад «Гімназія №3 імені В.О.Нижниченка Горішньоплавнівської міської ради Кременчуцького району Полтавської області»",
+   "settlement": "м. Горішні Плавні",
+   "members": [
+    {
+     "surname": "Дерновий",
+     "name": "Максим",
+     "patronymic": "Геннадійович",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t14",
+   "name": "d-base",
+   "school": "Терешківська сільська рада Полтавського району Полтавської області",
+   "settlement": "с. Терешки",
+   "members": [
+    {
+     "surname": "Шевельов",
+     "name": "Станіслав",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Єрьоменко",
+     "name": "Віталій",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Рогоза",
+     "name": "Олександр",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t15",
+   "name": "Синиця Tech",
+   "school": "Гімназія № 25 Полтавської міської ради",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Гресь",
+     "name": "Роман",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t16",
+   "name": "Синиця Junior",
+   "school": "Гімназія № 25 Полтавської міської ради",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Пазечко",
+     "name": "Богдан",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Горбань",
+     "name": "Марія",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t17",
+   "name": "Синиця",
+   "school": "Гімназія № 25 Полтавської міської ради",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Красовську",
+     "name": "Вікторія",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Красовський",
+     "name": "Дмитро",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Радіоненко",
+     "name": "Максим",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t18",
+   "name": "Злі бобри",
+   "school": "Шишацький ліцей Полтавської обласної ради",
+   "settlement": "смт Шишаки",
+   "members": [
+    {
+     "surname": "Губіцький",
+     "name": "Рустам",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Ляпко",
+     "name": "Максим",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t19",
+   "name": "rAI DevTeam",
+   "school": "Комунальний заклад «Полтавський міський багатопрофільний ліцей № 1 імені І. П. Котляревського Полтавської міської ради Полтавської області»",
+   "settlement": "м. Полтава",
+   "members": [
+    {
+     "surname": "Брижань",
+     "name": "Павло",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Геращенко",
+     "name": "Єгор",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  },
+  {
+   "id": "t20",
+   "name": "Г.Р.П - Генії Роботизованих Пристроїв",
+   "school": "Ліцей \"Лідер\" Пришибської сільської ради",
+   "settlement": "с. Пришиб",
+   "members": [
+    {
+     "surname": "Яремко",
+     "name": "Іван",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Оксанченко",
+     "name": "Олександр",
+     "patronymic": "",
+     "birthdate": ""
+    },
+    {
+     "surname": "Сендзюк",
+     "name": "Данило",
+     "patronymic": "",
+     "birthdate": ""
+    }
+   ]
+  }
+ ],
+ "entries": [
+  {
+   "teamId": "t1",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t2",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t3",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t4",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t5",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t6",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t7",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t8",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t9",
+   "category": "basketball"
+  },
+  {
+   "teamId": "t2",
+   "category": "delivery"
+  },
+  {
+   "teamId": "t5",
+   "category": "delivery"
+  },
+  {
+   "teamId": "t8",
+   "category": "delivery"
+  },
+  {
+   "teamId": "t9",
+   "category": "delivery"
+  },
+  {
+   "teamId": "t1",
+   "category": "football"
+  },
+  {
+   "teamId": "t2",
+   "category": "football"
+  },
+  {
+   "teamId": "t3",
+   "category": "football"
+  },
+  {
+   "teamId": "t5",
+   "category": "football"
+  },
+  {
+   "teamId": "t6",
+   "category": "football"
+  },
+  {
+   "teamId": "t7",
+   "category": "football"
+  },
+  {
+   "teamId": "t10",
+   "category": "football"
+  },
+  {
+   "teamId": "t11",
+   "category": "football"
+  },
+  {
+   "teamId": "t12",
+   "category": "football"
+  },
+  {
+   "teamId": "t13",
+   "category": "football"
+  },
+  {
+   "teamId": "t8",
+   "category": "football"
+  },
+  {
+   "teamId": "t1",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t2",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t3",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t4",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t5",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t6",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t7",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t11",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t8",
+   "category": "sumo"
+  },
+  {
+   "teamId": "t14",
+   "category": "maze"
+  },
+  {
+   "teamId": "t2",
+   "category": "maze"
+  },
+  {
+   "teamId": "t15",
+   "category": "maze"
+  },
+  {
+   "teamId": "t16",
+   "category": "maze"
+  },
+  {
+   "teamId": "t17",
+   "category": "maze"
+  },
+  {
+   "teamId": "t18",
+   "category": "maze"
+  },
+  {
+   "teamId": "t19",
+   "category": "smart"
+  },
+  {
+   "teamId": "t14",
+   "category": "smart"
+  },
+  {
+   "teamId": "t15",
+   "category": "smart"
+  },
+  {
+   "teamId": "t16",
+   "category": "smart"
+  },
+  {
+   "teamId": "t17",
+   "category": "smart"
+  },
+  {
+   "teamId": "t20",
+   "category": "smart"
+  }
+ ]
+}
